@@ -157,7 +157,7 @@ class Main:
                                                           simple=False, advanced=True)
                     if track.get('total') == 0:
                         print("No track found.")
-                        print("The track that was not found: {} - {}".format(artist, song))
+                        print("The track that was not found is: {} - {}".format(artist, song))
                         current_song = now_playing
                     else:
                         file_name = '{} - {}'.format(

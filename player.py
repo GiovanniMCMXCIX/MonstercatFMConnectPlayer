@@ -15,7 +15,7 @@ DATA_PATH = os.path.dirname(os.path.abspath(__file__)) + "/data/"
 DOWNLOAD_PATH = DATA_PATH + "downloads/"
 CONFIG_PATH = DATA_PATH + "config.json"
 substring = ":monstercat!monstercat@monstercat.tmi.twitch.tv PRIVMSG #monstercat :Now Playing:"
-# substring = ":giovani1906!giovani1906@giovani1906.tmi.twitch.tv PRIVMSG #giovani1906 :Now Playing:"
+# substring = ":giovani1906!giovani1906@giovani1906.tmi.twitch.tv PRIVMSG #giovani1906 :Now Playing:" # debug stuff
 
 
 def header():
@@ -32,7 +32,7 @@ def header():
 
 def below_line():
     print("Songs that are playing will appear below.\n"
-          "================================================================================")
+          "=========================================================================================================")
 
 
 class Main:
@@ -132,7 +132,7 @@ class Main:
 
     def play(self, sock):
         self.send_IRC("JOIN {}\r\n".format('#monstercat'), sock)
-        # self.send_IRC("JOIN {}\r\n".format('#giovani1906'), sock)
+        # self.send_IRC("JOIN {}\r\n".format('#giovani1906'), sock) # debug stuff
         init = 1
         song, artist, now_playing = "", "", ""
         current_song = now_playing
@@ -144,7 +144,7 @@ class Main:
 
             if self.read_buffer.find(substring) != -1:
                 search = "Now Playing: (.*) by (.*) - Listen"
-                # search = 'Now Playing: (.*) by (.*)\r\n'
+                # search = 'Now Playing: (.*) by (.*)\r\n' # debug stuff
 
                 song, artist = re.search(search, self.read_buffer).groups()
 
@@ -164,13 +164,11 @@ class Main:
                             connect.Client().get_song_artist(track['results'][0]['_id'], track=True, release=False),
                             connect.Client().get_song_title(track['results'][0]['_id'], track=True, release=False))
                         path = DOWNLOAD_PATH + file_name + ".mp3"
-                        now_playing = "Now Playing: {}".format(file_name)
 
-                        print(now_playing)
+                        print("Now Playing: {}".format(file_name))
 
                         if os.path.isfile(path):
                             self._play(path)
-
                         else:
                             self.download("https://s3.amazonaws.com/data.monstercat.com/blobs/" +
                                           connect.Client().get_streamHash(track_Id=track['results'][0]['_id']), path)

@@ -2,14 +2,24 @@
 # -*- coding: utf-8 -*-
 from multiprocessing import Process
 import requests
-import connect
 import getpass
 import socket
-import pygame
 import json
 import sys
 import os
 import re
+
+try:
+    import connect
+except:
+    raise ImportError("Module connect is missing please run "
+                      "'python3 -m pip install -U https://github.com/GiovanniMCMXCIX/connect.py/archive/master.zip'")
+
+try:
+    import pygame
+except:
+    raise ImportError("Module connect is missing please run "
+                      "'python3 -m pip install -U pygame'")
 
 DATA_PATH = os.path.dirname(os.path.abspath(__file__)) + "/data/"
 DOWNLOAD_PATH = DATA_PATH + "downloads/"

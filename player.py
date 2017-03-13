@@ -12,20 +12,18 @@ import re
 try:
     import connect
 except:
-    raise ImportError("Module connect is missing please run "
-                      "'python3 -m pip install -U https://github.com/GiovanniMCMXCIX/connect.py/archive/master.zip'")
+    raise ImportError("Module connect is missing please run 'python3 -m pip install -U connect.py'")
 
 try:
     import pygame
 except:
-    raise ImportError("Module connect is missing please run "
-                      "'python3 -m pip install -U pygame'")
+    raise ImportError("Module connect is missing please run 'python3 -m pip install -U pygame'")
 
 DATA_PATH = os.path.dirname(os.path.abspath(__file__)) + "/data/"
 DOWNLOAD_PATH = DATA_PATH + "downloads/"
 CONFIG_PATH = DATA_PATH + "config.json"
 substring = ":monstercat!monstercat@monstercat.tmi.twitch.tv PRIVMSG #monstercat :Now Playing:"
-# substring = ":giovani1906!giovani1906@giovani1906.tmi.twitch.tv PRIVMSG #giovani1906 :Now Playing:" # debug stuff
+# substring = ":giovani1906!giovani1906@giovani1906.tmi.twitch.tv PRIVMSG #giovani1906 :Now Playing:"  # debug stuff
 
 
 def header():
@@ -60,22 +58,16 @@ class Main:
             return True
 
     @staticmethod
-    def send_IRC(data, sock):
+    def send_irc(data, sock):
         sock.send(data.encode('utf-8'))
 
     def connect(self, nick, password, sock):
-        NICK = nick
-        PASSWORD = password
-
-        HOST = "irc.twitch.tv"
-        PORT = 6667
-        IDENT = NICK
-        REAL_NAME = NICK
+        host = "irc.twitch.tv"
 
         sock.settimeout(10)
         print("Connecting...\n")
         try:
-            sock.connect((HOST, PORT))
+            sock.connect((host, 6667))
         except:
             print('Connection failed.\n')
             sys.exit()
@@ -83,9 +75,9 @@ class Main:
         sock.settimeout(None)
 
         print('Logging in...\n')
-        self.send_IRC("PASS {}\r\n".format(PASSWORD), sock)
-        self.send_IRC("NICK {}\r\n".format(NICK), sock)
-        self.send_IRC("USER {} {} bla :{}\r\n".format(IDENT, HOST, REAL_NAME), sock)
+        self.send_irc("PASS {}\r\n".format(password), sock)
+        self.send_irc("NICK {}\r\n".format(nick), sock)
+        self.send_irc("USER {} {} bla :{}\r\n".format(nick, host, nick), sock)
 
         if self.check_login_status(sock.recv(1024).decode("utf-8")):
             print('Login successful!\n')
@@ -97,18 +89,18 @@ class Main:
         if not os.path.isfile(CONFIG_PATH):
             print("Config does not exist. Creating.")
 
-            _username = input("Enter your username: ")
+            username = input("Enter your username: ")
 
             print('Right click and paste your oauth key beginning with "oath:"')
-            _password = getpass.getpass('(text hidden):')
+            password = getpass.getpass('(text hidden):')
 
-            _data = {'username': _username, 'password': _password}
+            data = {'username': username, 'password': password}
 
             with open(CONFIG_PATH, 'w+') as config_file:
-                json.dump(_data, config_file)
+                json.dump(data, config_file)
                 print('Config file was created successfully!')
 
-            self.connect(_username, _password, sock)
+            self.connect(username, password, sock)
             below_line()
             Process(target=self.play(sock)).start()
         elif os.path.isfile(CONFIG_PATH):
@@ -141,8 +133,8 @@ class Main:
         pygame.mixer.music.play()
 
     def play(self, sock):
-        self.send_IRC("JOIN {}\r\n".format('#monstercat'), sock)
-        # self.send_IRC("JOIN {}\r\n".format('#giovani1906'), sock) # debug stuff
+        self.send_irc("JOIN {}\r\n".format('#monstercat'), sock)
+        # self.send_irc("JOIN {}\r\n".format('#giovani1906'), sock)  # debug stuff
         init = 1
         song, artist, now_playing = "", "", ""
         current_song = now_playing
@@ -150,29 +142,31 @@ class Main:
             self.read_buffer = sock.recv(1024).decode("utf-8")
 
             if self.read_buffer.find('PING') != -1:
-                self.send_IRC('PONG ' + self.read_buffer.split()[1] + '\r\n', sock)
+                self.send_irc('PONG ' + self.read_buffer.split()[1] + '\r\n', sock)
 
             if self.read_buffer.find(substring) != -1:
-                search = "Now Playing: (.*) by (.*) - Listen"
-                # search = 'Now Playing: (.*) by (.*)\r\n' # debug stuff
-
-                song, artist = re.search(search, self.read_buffer).groups()
+                results_1 = re.search("Now Playing: (.*) by (.*) - Listen", self.read_buffer)
+                if results_1:
+                    song, artist = results_1.groups()
+                else:
+                    results_2 = re.search("Now Playing: (.*) by (.*)\r\n", self.read_buffer)
+                    if results_2:
+                        song, artist = results_2.groups()
+                    else:
+                        print("\nError, can't get artist and song title in the line:\n{}\n".format(self.read_buffer))
 
                 now_playing = "Now Playing: {} - {}".format(artist, song)
 
                 if init or current_song != now_playing:
                     init = 0
 
-                    track = connect.Client().search_track(song=song, artist=artist,
-                                                          simple=False, advanced=True)
-                    if track.get('total') == 0:
+                    track = connect.Client().search_track_advanced(song, artist)
+                    if not track:
                         print("No track found.")
                         print("The track that was not found is: {} - {}".format(artist, song))
                         current_song = now_playing
                     else:
-                        file_name = '{} - {}'.format(
-                            connect.Client().get_song_artist(track['results'][0]['_id'], track=True, release=False),
-                            connect.Client().get_song_title(track['results'][0]['_id'], track=True, release=False))
+                        file_name = '{} - {}'.format(track[0].artists, track[0].title)
                         path = DOWNLOAD_PATH + file_name + ".mp3"
 
                         print("Now Playing: {}".format(file_name))
@@ -180,8 +174,7 @@ class Main:
                         if os.path.isfile(path):
                             self._play(path)
                         else:
-                            self.download("https://s3.amazonaws.com/data.monstercat.com/blobs/" +
-                                          connect.Client().get_streamHash(track_Id=track['results'][0]['_id']), path)
+                            self.download(list(track[0].albums)[0].stream_url, path)
                             self._play(path)
 
                         current_song = now_playing
